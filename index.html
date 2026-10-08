@@ -1,0 +1,69 @@
+<!doctype html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<title>Coccodrillo vs Piccione</title>
+<meta name="description" content="Un coccodrillo gigante nel centro di Roma contro un esercito di piccioni arroganti. Tieni premuto, rilascia, mordi. 30 secondi. Zero dignità. Pippo Poppi Games.">
+<link rel="canonical" href="https://pippopoppi.github.io/croc-vs-pigeon/">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Pippo Poppi Games">
+<meta property="og:title" content="Coccodrillo vs Piccione 🐊🐦">
+<meta property="og:description" content="One crocodile. Infinite pigeons. Zero dignity. Hold to charge, release to bite, survive 30 seconds of Roman pigeon poop. Play free, then challenge your friends on X.">
+<meta property="og:url" content="https://pippopoppi.github.io/croc-vs-pigeon/">
+<meta property="og:image" content="https://pippopoppi.github.io/croc-vs-pigeon/og.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Coccodrillo vs Piccione 🐊🐦">
+<meta name="twitter:description" content="One crocodile. Infinite pigeons. Zero dignity. Hold to charge, release to bite, survive 30 seconds of Roman pigeon poop. Play free, then challenge your friends on X.">
+<meta name="twitter:image" content="https://pippopoppi.github.io/croc-vs-pigeon/og.png">
+<meta name="theme-color" content="#79c8f3">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="icon-180.png">
+<style>
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { margin: 0; height: 100%; background: #1b2a36; color: #fff; font-family: ui-monospace, "Courier New", monospace; overflow: hidden; overscroll-behavior: none; }
+  body { display: flex; align-items: center; justify-content: center; height: 100dvh; touch-action: none; user-select: none; -webkit-user-select: none; }
+  #wrap { position: relative; }
+  canvas { display: block; touch-action: none; image-rendering: pixelated; image-rendering: crisp-edges; }
+  .hidden { display: none !important; }
+  .screen { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px; padding: 24px 18px; background: rgba(27, 42, 54, 0.92); text-align: center; }
+  .brand { font-size: 11px; letter-spacing: 3px; color: #a0d779; }
+  h2 { margin: 0; font-size: clamp(26px, 8vw, 36px); line-height: 1.1; color: #fff; }
+  .label { font-size: 11px; letter-spacing: 3px; color: #9fb3c9; margin-top: 6px; }
+  .big { font-size: clamp(40px, 14vw, 64px); font-weight: 800; line-height: 1; color: #ffd84a; }
+  .big.white { color: #fff; }
+  .tag { font-style: italic; color: #d9ecf7; font-size: 14px; max-width: 300px; }
+  .best { font-size: 12px; color: #9fb3c9; }
+  .btn { appearance: none; border: 3px solid #fff; cursor: pointer; font: inherit; font-weight: 800; letter-spacing: 2px; color: #1b2a36; padding: 12px 18px; background: #ffd84a; font-size: 15px; min-width: 240px; box-shadow: 4px 4px 0 #000; text-decoration: none; display: inline-block; }
+  .btn:active { transform: translate(3px, 3px); box-shadow: 1px 1px 0 #000; }
+  .btn.green { background: #a0d779; }
+  .btn.x { background: #000; color: #fff; }
+  .link { background: none; border: 0; color: #9fb3c9; font: inherit; font-size: 12px; cursor: pointer; text-decoration: underline; padding: 6px; }
+</style>
+</head>
+<body>
+<div id="wrap">
+  <canvas id="c" width="400" height="720"></canvas>
+
+  <div id="end" class="screen hidden">
+    <div class="brand">PIPPO POPPI GAMES — FINAL RESULT</div>
+    <h2 id="end-title">YOU GOT PIGEONED. 🐦</h2>
+    <div class="label">FINAL SCORE</div>
+    <div class="big" id="end-score">0</div>
+    <div class="label">PIGEONS EATEN</div>
+    <div class="big white" id="end-eaten">0</div>
+    <div class="tag" id="end-tag"></div>
+    <div class="best" id="end-best"></div>
+    <button class="btn" id="btn-copy">COPY X CHALLENGE</button>
+    <a class="btn x" id="btn-share" href="#" target="_blank" rel="noopener">𝕏 POST THE CHALLENGE</a>
+    <button class="btn green" id="btn-again">ANCORA UNA PARTITA</button>
+    <button class="link" id="btn-sound">🔊 Sound on</button>
+  </div>
+</div>
+<script src="game.js"></script>
+</body>
+</html>
