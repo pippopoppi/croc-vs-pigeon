@@ -15,7 +15,7 @@ No install, no menus, no login, no tutorial. One HTML page plus one JavaScript f
 - **Slide** the same finger left or right to move the crocodile, on the ground or in the air, to get under a pigeon or out from under a dropping. Arrow keys or A/D on desktop.
 - The longer you charge, the higher you jump. Time it to intercept pigeons while dodging what they drop.
 - Every pigeon is 100 points. Consecutive catches raise the combo multiplier (up to ×5). A jump with no catch, or a hit, resets it.
-- Each poop takes one of your three hearts. When the hearts are gone, the game ends. There is no clock: survive as long as you can.
+- Each poop takes one heart. You start with three, and every boss you eat adds one with no limit, so stacking lives is how you push a record. When the hearts are gone, the game ends. There is no clock: survive as long as you can.
 - Speed ramps up all the time. After 45 seconds the INFERNO starts and never stops.
 
 ## The brainrot
@@ -23,7 +23,7 @@ No install, no menus, no login, no tutorial. One HTML page plus one JavaScript f
 - **Piccione maranza**: sunglasses, gold chain, unpredictable flight, and it dodges when you jump at it.
 - **Piccione d'oro**: rare, very fast, 1,000 points.
 - **Italian combo**: five catches in a row and a distorted tarantella plays.
-- **Final boss**: a giant pigeon shows up as a special event, needs three bites, drops a storm of poop, and gives a heart back when eaten.
+- **Final boss**: a giant pigeon shows up as a special event, needs three bites, drops a storm of poop, and gives an extra heart when eaten, beyond the starting three.
 
 At the end you get the **FINAL RESULT** screen: YOU GOT PIGEONED, time survived, score, pigeons eaten, and a **Copy X challenge** button that puts a ready-made challenge in your clipboard, plus a direct post-to-X button.
 

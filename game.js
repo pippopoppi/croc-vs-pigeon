@@ -178,7 +178,7 @@ function eat(b) {
   G.floats.push({ x: b.x, y: b.y - 10, text: '+' + pts, life: 0.9, color: P.golden ? '#ffd84a' : '#fff' });
   for (let i = 0; i < 10; i++) { const a = Math.random() * TAU, v = 30 + Math.random() * 70; G.parts.push({ x: b.x, y: b.y, vx: Math.cos(a) * v, vy: Math.sin(a) * v - 30, life: 0.5 + Math.random() * 0.5, color: i % 3 === 0 ? '#fff' : P.color, feather: true, rot: Math.random() * TAU }); }
   sfxChomp();
-  if (P.boss) { G.hearts = Math.min(3, G.hearts + 1); G.msg = 'BOSS MANGIATO! +♥'; G.msgT = 1.5; G.shake = 0.8; G.bossDone++; }
+  if (P.boss) { G.hearts++; G.msg = 'BOSS MANGIATO! +♥ (' + G.hearts + ')'; G.msgT = 1.5; G.shake = 0.8; G.bossDone++; }
   if (G.combo === 5) { G.msg = 'ITALIAN COMBO!'; G.msgT = 1.6; sfxItalian(); G.flash = 0.4; }
   else if (G.combo > 5 && G.combo % 5 === 0) { G.msg = '×' + mult + ' COMBO!'; G.msgT = 1; tone(660, 0.12, 'triangle', 0.05, 990); }
   c.vy = Math.min(c.vy, -60); // a little bounce to chain bites
@@ -451,7 +451,9 @@ function draw() {
   const hud = p.createLinearGradient(0, 0, 0, 18); hud.addColorStop(0, 'rgba(10,20,30,0.75)'); hud.addColorStop(1, 'rgba(10,20,30,0.35)');
   p.fillStyle = hud; p.fillRect(0, 0, W, 18);
   text('SCORE', 5, 4, '#9fb3c9', 6); text(String(G.score).padStart(5, '0'), 31, 3, '#fff', 8.5);
-  for (let i = 0; i < 3; i++) heart(92 + i * 10, 8.5, 4, i < G.hearts ? '#ff4d5e' : 'rgba(255,255,255,0.25)');
+  // lives: three slots to start, growing with every boss eaten; past six it becomes a counter
+  if (G.hearts <= 6) { const slots = Math.max(3, G.hearts); for (let i = 0; i < slots; i++) heart(92 + i * 10, 8.5, 4, i < G.hearts ? '#ff4d5e' : 'rgba(255,255,255,0.25)'); }
+  else { heart(92, 8.5, 4, '#ff4d5e'); text('×' + G.hearts, 99, 3, '#ff8a94', 8.5); }
   const el = Math.floor(G.t), mm = Math.floor(el / 60), ss = el % 60;
   text(String(mm).padStart(2, '0') + ':' + String(ss).padStart(2, '0'), W - 5, 3, G.inferno && Math.floor(t * 4) % 2 === 0 ? '#ff5e5e' : '#fff', 8.5, 'right');
   if (G.state === 'play') {
