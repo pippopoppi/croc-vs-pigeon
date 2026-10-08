@@ -12,6 +12,11 @@ const CROC_MIN = 24, CROC_MAX = W - 24;
 const RAMP = 60;               // seconds over which the difficulty climbs to full
 const INFERNO_AT = 45;         // seconds after which the inferno never stops
 const SAVE_KEY = 'crocvspigeon.v1';
+// Shared ranking. Leave empty for a per-device ranking only; set it to the URL of the
+// deployed Cloudflare Worker in server/ to enable the world ranking (see README).
+const LEADERBOARD_URL = '';
+const BOARD_SIZE = 10;         // rows shown
+const BOARD_KEEP = 100;        // rows kept locally
 const SITE_URL = (location.origin + location.pathname).replace(/index\.html$/, '');
 const TAU = 6.2832;
 const G_ACC = 900;
@@ -26,12 +31,55 @@ const PIGEONS = {
 
 // ---------- save ----------
 function loadSave() {
-  const d = { best: 0, bestEaten: 0, bestTime: 0, games: 0, sound: true };
+  const d = { best: 0, bestEaten: 0, bestTime: 0, games: 0, sound: true, name: '', board: [] };
   try { const s = JSON.parse(localStorage.getItem(SAVE_KEY)); if (s) Object.assign(d, s); } catch (e) { /* no storage */ }
   return d;
 }
 const save = loadSave();
 function persist() { try { localStorage.setItem(SAVE_KEY, JSON.stringify(save)); } catch (e) { /* ignore */ } }
+
+// ---------- ranking ----------
+// One row per nickname (case-insensitive). A new score for a known name only replaces the
+// row when it is better, so you can reuse your name and keep your record.
+function cleanName(v) { return String(v || '').replace(/[^\p{L}\p{N}\p{Emoji_Presentation} _.\-!?*]/gu, '').replace(/\s+/g, ' ').trim().slice(0, 12).toUpperCase(); }
+function cmpRows(a, b) { return b.score - a.score || b.time - a.time || (a.at || 0) - (b.at || 0); }
+function upsert(board, row) {
+  const key = row.name.toLowerCase();
+  const i = board.findIndex(e => e.name.toLowerCase() === key);
+  let improved = false;
+  if (i < 0) { board.push(row); improved = true; }
+  else if (cmpRows(row, board[i]) < 0) { board[i] = row; improved = true; }
+  board.sort(cmpRows); if (board.length > BOARD_KEEP) board.length = BOARD_KEEP;
+  return { rank: board.findIndex(e => e.name.toLowerCase() === key) + 1, improved };
+}
+let worldBoard = null;          // last list fetched from the server, or null when offline / local-only
+function renderBoard() {
+  const list = document.getElementById('board'); if (!list) return;
+  const rows = (worldBoard || save.board).slice(0, BOARD_SIZE);
+  const me = cleanName(save.name).toLowerCase();
+  list.innerHTML = rows.length ? '' : '<li class="empty">Nessun punteggio. Sii il primo!</li>';
+  rows.forEach((r, i) => {
+    const li = document.createElement('li'); if (r.name.toLowerCase() === me) li.className = 'me';
+    const mk = (cls, txt) => { const d = document.createElement('span'); d.className = cls; d.textContent = txt; li.appendChild(d); };
+    mk('pos', i + 1); mk('name', r.name); mk('pts', Number(r.score).toLocaleString()); mk('sub', fmtTime(r.time));
+    list.appendChild(li);
+  });
+  const title = document.getElementById('board-title'), note = document.getElementById('board-note');
+  if (title) title.textContent = worldBoard ? 'CLASSIFICA MONDIALE' : 'CLASSIFICA';
+  if (note) note.textContent = worldBoard ? 'Top ' + BOARD_SIZE + ' di tutti i giocatori' : LEADERBOARD_URL ? 'Classifica mondiale non raggiungibile: mostro quella di questo dispositivo' : 'Su questo dispositivo';
+}
+async function fetchBoard() {
+  if (!LEADERBOARD_URL || typeof fetch !== 'function') return;
+  try { const r = await fetch(LEADERBOARD_URL + '?top=' + BOARD_SIZE, { cache: 'no-store' }); if (r.ok) { worldBoard = (await r.json()).top || []; renderBoard(); } } catch (e) { /* offline: keep local */ }
+}
+async function submitScore(row) {
+  if (!LEADERBOARD_URL || typeof fetch !== 'function') return null;
+  try {
+    const r = await fetch(LEADERBOARD_URL, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(row) });
+    if (!r.ok) return null;
+    const j = await r.json(); worldBoard = j.top || worldBoard; renderBoard(); return j;
+  } catch (e) { return null; }
+}
 
 // ---------- helpers ----------
 const clamp = (v, a, b) => v < a ? a : v > b ? b : v;
@@ -216,9 +264,12 @@ function update(dt) {
 function endGame() {
   G.state = 'over';
   const newBest = G.score > save.best;
-  save.best = Math.max(save.best, G.score); save.bestEaten = Math.max(save.bestEaten, G.eaten); save.bestTime = Math.max(save.bestTime, G.t); persist();
+  save.best = Math.max(save.best, G.score); save.bestEaten = Math.max(save.bestEaten, G.eaten); save.bestTime = Math.max(save.bestTime, G.t);
+  const row = { name: cleanName(save.name) || 'ANONIMO', score: G.score, time: Math.floor(G.t), eaten: G.eaten, at: Date.now() };
+  G.rank = upsert(save.board, row); G.worldRank = null; persist();
   tone(newBest ? 660 : 160, 0.5, newBest ? 'triangle' : 'sawtooth', 0.07, newBest ? 990 : 60);
   showEnd(newBest);
+  submitScore(row).then(j => { if (j && G.state === 'over') { G.worldRank = j; showRank(); } });
 }
 
 // ---------- rendering (high-resolution vector art) ----------
@@ -410,17 +461,17 @@ function draw() {
     if (G.msg) { const k = clamp(G.msgT * 3, 0, 1); p.save(); p.translate(W / 2, 158); p.scale(0.8 + k * 0.2, 0.8 + k * 0.2); rr(-70, -9, 140, 18, 6, 'rgba(10,20,30,0.7)'); text(G.msg, 0, -6.5, G.msg.includes('INFERNO') ? '#ff5e5e' : '#ffd84a', 10, 'center', 'rgba(0,0,0,0.5)'); p.restore(); }
   }
   if (G.state === 'title') {
-    rr(10, 96, W - 20, 72, 10, 'rgba(10,20,30,0.72)');
-    text('COCCODRILLO', W / 2, 104, '#b9e18c', 17, 'center', '#1b2a36'); text('VS PICCIONE', W / 2, 124, '#fff', 17, 'center', '#1b2a36');
-    text('SURVIVE. EAT. DODGE.', W / 2, 146, '#9fb3c9', 6.5, 'center');
-    text('TAP TO START', W / 2, 155, Math.floor(t * 2) % 2 === 0 ? '#ffd84a' : '#fff', 8, 'center', 'rgba(0,0,0,0.5)');
+    // The name + ranking card sits over the middle of the screen, so the title lives up top.
+    rr(10, 24, W - 20, 62, 10, 'rgba(10,20,30,0.72)');
+    text('COCCODRILLO', W / 2, 31, '#b9e18c', 17, 'center', '#1b2a36'); text('VS PICCIONE', W / 2, 51, '#fff', 17, 'center', '#1b2a36');
+    text('SURVIVE. EAT. DODGE.', W / 2, 74, Math.floor(t * 2) % 2 === 0 ? '#ffd84a' : '#9fb3c9', 6.5, 'center');
   }
 }
 
 // ---------- input: one button ----------
 function pressStart() {
   ac();
-  if (G.state === 'title') { startGame(); return; }
+  if (G.state === 'title') { openStart(); return; }
   if (G.state !== 'play') return;
   const c = G.croc;
   if (!c.air) { c.charging = true; c.charge = 0; }
@@ -434,6 +485,7 @@ canvas.addEventListener('pointermove', e => { if (!drag || G.state !== 'play') r
 canvas.addEventListener('pointerup', pressEnd);
 canvas.addEventListener('pointercancel', pressEnd);
 window.addEventListener('keydown', e => {
+  if (e.target && e.target.tagName === 'INPUT') return;
   if ((e.code === 'Space' || e.key === ' ') && !e.repeat) { e.preventDefault(); pressStart(); }
   if (e.key === 'ArrowLeft' || e.key === 'a' || e.key === 'A') keys.left = true;
   if (e.key === 'ArrowRight' || e.key === 'd' || e.key === 'D') keys.right = true;
@@ -448,7 +500,32 @@ window.addEventListener('keyup', e => {
 const $ = id => document.getElementById(id);
 function showScreen(id) { document.querySelectorAll('.screen').forEach(s => s.classList.toggle('hidden', s.id !== id)); }
 function challengeText() {
-  return 'Sono sopravvissuto ' + fmtTime(G.t) + ', ho mangiato ' + G.eaten + ' piccioni e fatto ' + G.score.toLocaleString() + ' punti in Coccodrillo vs Piccione 🐊🐦 Battimi: ' + SITE_URL + ' #CoccodrilloVsPiccione #PippoPoppiGames';
+  const rank = G.worldRank && G.worldRank.rank ? ' Sono #' + G.worldRank.rank + ' in classifica mondiale.' : '';
+  return 'Sono sopravvissuto ' + fmtTime(G.t) + ', ho mangiato ' + G.eaten + ' piccioni e fatto ' + G.score.toLocaleString() + ' punti in Coccodrillo vs Piccione 🐊🐦' + rank + ' Battimi: ' + SITE_URL + ' #CoccodrilloVsPiccione #PippoPoppiGames';
+}
+function showRank() {
+  const name = cleanName(save.name) || 'ANONIMO';
+  if (G.worldRank) {
+    const w = G.worldRank;
+    $('end-rank').textContent = name + ': #' + w.rank + ' nel mondo' + (w.improved ? (w.rank === 1 ? ' 👑 PRIMO!' : ' 🏆') : ' · il tuo record resta ' + Number(w.best).toLocaleString());
+  } else if (G.rank) {
+    $('end-rank').textContent = name + ': #' + G.rank.rank + ' su questo dispositivo' + (G.rank.improved ? (G.rank.rank === 1 ? ' 👑' : ' 🏆') : '');
+  } else $('end-rank').textContent = '';
+  $('btn-share').href = 'https://twitter.com/intent/tweet?text=' + encodeURIComponent(challengeText().replace(SITE_URL, '')) + '&url=' + encodeURIComponent(SITE_URL);
+}
+function openStart() {
+  G.state = 'title';
+  const inp = $('nick'); if (inp) { inp.value = save.name || ''; inp.classList.remove('shake'); }
+  renderBoard(); fetchBoard();
+  showScreen('start');
+}
+function playFromStart() {
+  const inp = $('nick');
+  const name = cleanName(inp ? inp.value : '');
+  if (!name) { if (inp) { inp.value = ''; inp.placeholder = 'SERVE UN NOME!'; inp.classList.remove('shake'); void inp.offsetWidth; inp.classList.add('shake'); inp.focus(); } return; }
+  save.name = name; persist();
+  if (inp) inp.blur();
+  ac(); startGame();
 }
 function fmtTime(t) { const el = Math.floor(t); return (el >= 60 ? Math.floor(el / 60) + 'm ' : '') + (el % 60) + 's'; }
 function showEnd(newBest) {
@@ -458,7 +535,7 @@ function showEnd(newBest) {
   $('end-eaten').textContent = G.eaten;
   $('end-best').textContent = (newBest ? 'NEW RECORD! ' : 'Record: ' + save.best.toLocaleString() + ' · ') + 'Miglior tempo: ' + fmtTime(save.bestTime) + ' · Partite: ' + save.games;
   $('end-tag').textContent = G.t >= 90 ? 'Roma è tua. I piccioni lo sanno.' : G.t >= 45 ? 'Hai visto l’inferno. L’inferno ha visto te.' : 'You are not the apex predator. You are the lunch.';
-  $('btn-share').href = 'https://twitter.com/intent/tweet?text=' + encodeURIComponent(challengeText().replace(SITE_URL, '')) + '&url=' + encodeURIComponent(SITE_URL);
+  showRank();
   $('btn-copy').textContent = 'COPY X CHALLENGE';
   showScreen('end');
 }
@@ -468,6 +545,9 @@ $('btn-copy').addEventListener('click', async () => {
   catch (e) { prompt('Copy this:', txt); }
 });
 $('btn-again').addEventListener('click', () => { ac(); startGame(); });
+$('btn-board').addEventListener('click', () => { ac(); openStart(); });
+$('btn-play').addEventListener('click', playFromStart);
+$('nick').addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); playFromStart(); } });
 $('btn-sound').addEventListener('click', () => { save.sound = !save.sound; persist(); $('btn-sound').textContent = save.sound ? '🔊 Sound on' : '🔇 Sound off'; });
 $('btn-sound').textContent = save.sound ? '🔊 Sound on' : '🔇 Sound off';
 
@@ -482,8 +562,8 @@ function frame(now) {
   requestAnimationFrame(frame);
 }
 document.addEventListener('visibilitychange', () => { last = performance.now(); });
-showScreen(null);
+openStart();
 requestAnimationFrame(frame);
 
-window.CrocVsPigeon = { G, save, startGame, update, draw, pressStart, pressEnd, PIGEONS, W, H, GROUND, CROC_X };
+window.CrocVsPigeon = { G, save, startGame, update, draw, pressStart, pressEnd, openStart, playFromStart, upsert, cleanName, PIGEONS, W, H, GROUND, CROC_X };
 })();
