@@ -6,7 +6,7 @@ A one-button survival arcade game by Pippo Poppi Games. A giant crocodile in the
 
 **Play it:** https://pippopoppi.github.io/croc-vs-pigeon/
 
-No install, no menus, no login, no tutorial. One HTML page plus one JavaScript file on an HTML5 canvas, drawn in code at 200×360 and scaled up for the pixel-art look.
+No install, no menus, no login, no tutorial. One HTML page plus one JavaScript file on an HTML5 canvas, with all the art drawn in code as vector shapes at full device resolution.
 
 ## How to play
 
