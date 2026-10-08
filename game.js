@@ -159,6 +159,7 @@ function release() {
   const c = G.croc;
   if (!c.charging) return;
   c.charging = false;
+  if (c.air) return;            // a finger lifted in mid-air: nothing to launch
   const v = 230 + c.charge * 430;
   c.vy = -v; c.air = true; c.mouth = 1; c.bite = 0; c.ate = 0;
   tone(300 + c.charge * 400, 0.1, 'square', 0.04, 150);
@@ -456,7 +457,7 @@ function draw() {
   if (G.state === 'play') {
     const mult = Math.min(5, 1 + Math.floor(G.combo / 5));
     p.fillStyle = 'rgba(10,20,30,0.55)'; p.fillRect(0, H - 14, W, 14);
-    text(G.croc.air ? 'CHOMP!  DRAG TO STEER' : G.croc.charging ? 'RELEASE TO BITE' : 'HOLD TO CHARGE · DRAG TO MOVE', 5, H - 10.5, '#fff', 6.5);
+    text(G.croc.air ? 'TAP TO BITE AGAIN · DRAG TO STEER' : G.croc.charging ? 'RELEASE TO BITE' : 'HOLD TO CHARGE · DRAG TO MOVE', 5, H - 10.5, '#fff', 6.5);
     if (G.combo >= 2) { rr(W - 58, H - 13, 54, 11, 4, mult >= 3 ? '#ffd84a' : 'rgba(255,255,255,0.15)'); text('×' + mult + ' COMBO ' + G.combo, W - 31, H - 10.5, mult >= 3 ? '#1b2a36' : '#ffd84a', 6.5, 'center'); }
     if (G.msg) { const k = clamp(G.msgT * 3, 0, 1); p.save(); p.translate(W / 2, 158); p.scale(0.8 + k * 0.2, 0.8 + k * 0.2); rr(-70, -9, 140, 18, 6, 'rgba(10,20,30,0.7)'); text(G.msg, 0, -6.5, G.msg.includes('INFERNO') ? '#ff5e5e' : '#ffd84a', 10, 'center', 'rgba(0,0,0,0.5)'); p.restore(); }
   }
@@ -481,7 +482,11 @@ function pressStart() {
   if (G.state === 'title') { openStart(); return; }
   if (G.state !== 'play') return;
   const c = G.croc;
-  if (!c.air) { c.charging = true; c.charge = 0; }
+  if (!c.air) { c.charging = true; c.charge = 0; return; }
+  // in the air: every tap snaps the jaws open again for another bite, and holding the
+  // finger through the landing starts the next charge right away
+  c.mouth = 1; c.bites = (c.bites || 0) + 1; c.charging = true; c.charge = 0;
+  tone(520, 0.06, 'square', 0.035, 260);
 }
 function pressEnd() { drag = null; if (G.state === 'play') release(); }
 const keys = { left: false, right: false };

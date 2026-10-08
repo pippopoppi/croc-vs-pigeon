@@ -11,6 +11,7 @@ No install, no menus, no login, no tutorial. One HTML page plus one JavaScript f
 ## How to play
 
 - **Hold** to charge the jump, **release** to leap with open jaws and bite. Mouse, spacebar, or a finger on the phone.
+- **Tap again in mid-air** to snap the jaws open for another bite, as many times as you like. Keep the finger down and the next charge starts the moment you land.
 - **Slide** the same finger left or right to move the crocodile, on the ground or in the air, to get under a pigeon or out from under a dropping. Arrow keys or A/D on desktop.
 - The longer you charge, the higher you jump. Time it to intercept pigeons while dodging what they drop.
 - Every pigeon is 100 points. Consecutive catches raise the combo multiplier (up to ×5). A jump with no catch, or a hit, resets it.
