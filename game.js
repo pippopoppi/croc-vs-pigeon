@@ -6,7 +6,9 @@
 // smoothing off, which is what gives the chunky pixel-art look.
 const W = 200, H = 360, SCALE = 2;
 const GROUND = 302;            // where the crocodile stands
-const CROC_X = 100;
+const CROC_X = 100;            // starting x
+const CROC_S = 0.65;           // crocodile size
+const CROC_MIN = 24, CROC_MAX = W - 24;
 const ROUND = 30;              // seconds per game
 const SAVE_KEY = 'crocvspigeon.v1';
 const SITE_URL = (location.origin + location.pathname).replace(/index\.html$/, '');
@@ -71,14 +73,14 @@ function sfxBoss() { tone(90, 0.5, 'sawtooth', 0.08, 50); tone(70, 0.5, 'sawtoot
 // ---------- state ----------
 const G = {
   state: 'title', t: 0, left: ROUND, score: 0, eaten: 0, combo: 0, best: 0, hearts: 3,
-  croc: { y: GROUND, vy: 0, air: false, charge: 0, charging: false, mouth: 0, bite: 0, hurt: 0, ate: 0 },
+  croc: { x: CROC_X, y: GROUND, vy: 0, air: false, charge: 0, charging: false, mouth: 0, bite: 0, hurt: 0, ate: 0 },
   birds: [], poops: [], parts: [], floats: [], spawnT: 1.2, bossT: 14, bossDone: 0, shake: 0, flash: 0, lastTick: 31, inferno: false, msg: null, msgT: 0,
   clouds: Array.from({ length: 5 }, (_, i) => ({ x: i * 50 + rnd(0, 30), y: 20 + rnd(0, 50), w: 18 + rnd(0, 18) })),
 };
 
 function startGame() {
   G.state = 'play'; G.t = 0; G.left = ROUND; G.score = 0; G.eaten = 0; G.combo = 0; G.hearts = 3;
-  G.croc = { y: GROUND, vy: 0, air: false, charge: 0, charging: false, mouth: 0, bite: 0, hurt: 0, ate: 0 };
+  G.croc = { x: CROC_X, y: GROUND, vy: 0, air: false, charge: 0, charging: false, mouth: 0, bite: 0, hurt: 0, ate: 0 };
   G.birds = []; G.poops = []; G.parts = []; G.floats = []; G.spawnT = 0.6; G.bossT = 14; G.bossDone = 0; G.shake = 0; G.flash = 0; G.lastTick = 31; G.inferno = false; G.msg = null;
   save.games++; persist();
   showScreen(null);
@@ -137,7 +139,7 @@ function hurt() {
   if (c.hurt > 0) return;
   c.hurt = 1; G.hearts--; G.combo = 0; G.shake = 0.8; G.flash = 0.5;
   sfxSplat();
-  G.floats.push({ x: CROC_X, y: c.y - 20, text: 'CACCA!', life: 0.9, color: '#ffb0b0' });
+  G.floats.push({ x: c.x, y: c.y - 20, text: 'CACCA!', life: 0.9, color: '#ffb0b0' });
 }
 
 // ---------- simulation ----------
@@ -152,6 +154,8 @@ function update(dt) {
   // croc
   const c = G.croc;
   if (c.hurt > 0) c.hurt -= dt;
+  if (keys.left) c.x = clamp(c.x - 120 * dt, CROC_MIN, CROC_MAX);
+  if (keys.right) c.x = clamp(c.x + 120 * dt, CROC_MIN, CROC_MAX);
   if (c.charging && !c.air) c.charge = Math.min(1, c.charge + dt / 0.8);
   if (c.air) {
     c.vy += G_ACC * dt; c.y += c.vy * dt;
@@ -170,7 +174,7 @@ function update(dt) {
   if (G.bossT <= 0 && !G.birds.some(b => b.type === 'boss')) { spawnBird('boss'); G.bossT = 12; }
 
   // birds
-  const mouth = { x: CROC_X, y: c.y - 16, r: 15 };
+  const mouth = { x: c.x + 8, y: c.y - 10, r: 11 };
   for (const b of G.birds) {
     if (b.dead) continue;
     const P = PIGEONS[b.type];
@@ -180,11 +184,11 @@ function update(dt) {
     if (P.erratic) b.y = b.baseY + Math.sin(b.ph * 0.6) * 22 + Math.sin(b.ph * 1.7) * 8;
     else if (!P.boss) b.y = b.baseY + Math.sin(b.ph * 0.5) * 3;
     else b.y = b.baseY + Math.sin(b.ph * 0.25) * 10;
-    if (P.dodges && c.air && c.vy < 0 && Math.abs(b.x - CROC_X) < 40 && b.y > c.y - 90 && b.dodgeT <= 0) { b.baseY -= 28; b.dodgeT = 1.5; sfxCoo(); }
+    if (P.dodges && c.air && c.vy < 0 && Math.abs(b.x - c.x) < 40 && b.y > c.y - 90 && b.dodgeT <= 0) { b.baseY -= 28; b.dodgeT = 1.5; sfxCoo(); }
     if (b.dodgeT > 0) b.dodgeT -= dt;
     if (P.bombs) {
       b.bombT -= dt;
-      if (b.bombT <= 0) { b.bombT = P.boss ? rnd(0.35, 0.6) : rnd(0.9, 1.6); if (Math.abs(b.x - CROC_X) < (P.boss ? 70 : 34) || P.boss) { G.poops.push({ x: b.x + rnd(-4, 4), y: b.y + b.r, vy: 40, dead: false }); if (Math.random() < 0.5) sfxCoo(); } }
+      if (b.bombT <= 0) { b.bombT = P.boss ? rnd(0.35, 0.6) : rnd(0.9, 1.6); if (Math.abs(b.x - c.x) < (P.boss ? 70 : 30) || P.boss) { G.poops.push({ x: b.x + rnd(-4, 4), y: b.y + b.r, vy: 40, dead: false }); if (Math.random() < 0.5) sfxCoo(); } }
     }
     if ((b.dir > 0 && b.x > W + 24) || (b.dir < 0 && b.x < -24)) { b.dead = true; continue; }
     // bite check: mouth open, croc airborne
@@ -198,8 +202,8 @@ function update(dt) {
     if (p.dead) continue;
     p.vy += 220 * dt; p.y += p.vy * dt;
     if (p.y > GROUND + 30) { p.dead = true; for (let i = 0; i < 4; i++) G.parts.push({ x: p.x, y: GROUND + 30, vx: rnd(-30, 30), vy: rnd(-40, -10), life: 0.3, color: '#f3f0e6' }); continue; }
-    const bx = CROC_X, by = c.y + 6;
-    if (Math.abs(p.x - bx) < 20 && p.y > by - 22 && p.y < by + 24) { p.dead = true; hurt(); }
+    const bx = c.x, by = c.y + 4;
+    if (Math.abs(p.x - bx) < 14 && p.y > by - 14 && p.y < by + 16) { p.dead = true; hurt(); }
   }
   G.birds = G.birds.filter(b => !b.dead); G.poops = G.poops.filter(p => !p.dead);
   for (let i = G.parts.length - 1; i >= 0; i--) { const p = G.parts[i]; p.life -= dt; if (p.life <= 0) { G.parts.splice(i, 1); continue; } p.x += p.vx * dt; p.y += p.vy * dt; p.vy += 200 * dt; }
@@ -265,8 +269,10 @@ function drawRome(t) {
 }
 
 function drawCroc(t) {
-  const c = G.croc, y = c.y, x = CROC_X;
+  const c = G.croc;
   if (c.hurt > 0 && Math.floor(t * 20) % 2 === 0) return;
+  p.save(); p.translate(Math.round(c.x), Math.round(c.y)); p.scale(CROC_S, CROC_S);
+  const x = 0, y = 0;
   const squat = !c.air && c.charging ? Math.round(c.charge * 5) : 0;
   const body = '#398c40', dark = '#225a30', belly = '#a0d779';
   // tail
@@ -287,8 +293,9 @@ function drawCroc(t) {
     for (let i = 0; i < 5; i++) { R(x + 12 + i * 6, y + 10 + squat, 2, 3, '#fff'); R(x + 14 + i * 6, y + 7 + squat + open, 2, 3, '#fff'); }
   }
   R(x + 34, y + 2 + squat, 4, 3, '#1a3a1f');                // nostril
+  p.restore();
   // charge bar
-  if (c.charging && !c.air) { R(x - 20, y - 14, 40, 5, '#1b2a36'); R(x - 19, y - 13, Math.round(38 * c.charge), 3, c.charge > 0.85 ? '#ff5e5e' : '#ffd84a'); }
+  if (c.charging && !c.air) { R(c.x - 14, c.y - 12, 28, 4, '#1b2a36'); R(c.x - 13, c.y - 11, Math.round(26 * c.charge), 2, c.charge > 0.85 ? '#ff5e5e' : '#ffd84a'); }
 }
 
 function drawBird(b, t) {
@@ -338,7 +345,7 @@ function draw() {
   if (G.state === 'play') {
     const mult = Math.min(5, 1 + Math.floor(G.combo / 5));
     R(0, H - 14, W, 14, 'rgba(0,0,0,0.55)');
-    text(G.croc.air ? 'CHOMP!' : G.croc.charging ? 'RELEASE TO BITE' : 'HOLD TO CHARGE', 4, H - 11, '#fff', 7);
+    text(G.croc.air ? 'CHOMP! DRAG TO STEER' : G.croc.charging ? 'RELEASE TO BITE' : 'HOLD TO CHARGE · DRAG TO MOVE', 4, H - 11, '#fff', 7);
     if (G.combo >= 2) text('×' + mult + ' COMBO (' + G.combo + ')', W - 4, H - 11, '#ffd84a', 7, 'right');
     if (G.msg) { R(0, 150, W, 16, 'rgba(0,0,0,0.6)'); text(G.msg, W / 2, 153, G.msg.includes('INFERNO') ? '#ff5e5e' : '#ffd84a', 9, 'center'); }
   }
@@ -362,12 +369,24 @@ function pressStart() {
   const c = G.croc;
   if (!c.air) { c.charging = true; c.charge = 0; }
 }
-function pressEnd() { if (G.state === 'play') release(); }
-canvas.addEventListener('pointerdown', e => { e.preventDefault(); pressStart(); try { canvas.setPointerCapture(e.pointerId); } catch (err) { /* ignore */ } });
+function pressEnd() { drag = null; if (G.state === 'play') release(); }
+const keys = { left: false, right: false };
+let drag = null;
+function pointerX(e) { const r = canvas.getBoundingClientRect(); return (e.clientX - r.left) / r.width * W; }
+canvas.addEventListener('pointerdown', e => { e.preventDefault(); pressStart(); drag = { px: pointerX(e), cx: G.croc.x }; try { canvas.setPointerCapture(e.pointerId); } catch (err) { /* ignore */ } });
+canvas.addEventListener('pointermove', e => { if (!drag || G.state !== 'play') return; G.croc.x = clamp(drag.cx + (pointerX(e) - drag.px) * 1.5, CROC_MIN, CROC_MAX); });
 canvas.addEventListener('pointerup', pressEnd);
 canvas.addEventListener('pointercancel', pressEnd);
-window.addEventListener('keydown', e => { if ((e.code === 'Space' || e.key === ' ') && !e.repeat) { e.preventDefault(); pressStart(); } });
-window.addEventListener('keyup', e => { if (e.code === 'Space' || e.key === ' ') pressEnd(); });
+window.addEventListener('keydown', e => {
+  if ((e.code === 'Space' || e.key === ' ') && !e.repeat) { e.preventDefault(); pressStart(); }
+  if (e.key === 'ArrowLeft' || e.key === 'a' || e.key === 'A') keys.left = true;
+  if (e.key === 'ArrowRight' || e.key === 'd' || e.key === 'D') keys.right = true;
+});
+window.addEventListener('keyup', e => {
+  if (e.code === 'Space' || e.key === ' ') pressEnd();
+  if (e.key === 'ArrowLeft' || e.key === 'a' || e.key === 'A') keys.left = false;
+  if (e.key === 'ArrowRight' || e.key === 'd' || e.key === 'D') keys.right = false;
+});
 
 // ---------- screens ----------
 const $ = id => document.getElementById(id);
