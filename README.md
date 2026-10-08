@@ -23,7 +23,19 @@ No install, no menus, no login, no tutorial. One HTML page plus one JavaScript f
 - **Piccione maranza**: sunglasses, gold chain, unpredictable flight, and it dodges when you jump at it.
 - **Piccione d'oro**: rare, very fast, 1,000 points.
 - **Italian combo**: five catches in a row and a distorted tarantella plays.
-- **Final boss**: a giant pigeon shows up as a special event, needs three bites, drops a storm of poop, and gives an extra heart when eaten, beyond the starting three.
+- **Bosses**, one every 12 seconds or so, each worth an extra heart when eaten, beyond the starting three:
+  - **Il Piccione Gigante** from the start: three bites, a storm of poop.
+  - **Il Gabbiano Reale** after 50 seconds: four bites, long wings, and it dives at you. Jump into it with open jaws or get out of the way.
+  - **Il Corvaccio** after 100 seconds: five bites, drops two at a time, and teleports away when you jump at it. Nets don't miss.
+
+## Upgrades
+
+Eating pigeons fills the bar at the bottom left (bosses count triple). Fill it and the crocodile levels up:
+
+1. **Denti d'oro** (12 pigeons): golden teeth, a bigger bite, and 25% more points on everything.
+2. **Rete** (18 more): a net button appears at the bottom right (or press N / Shift). The net flies straight up and eats everything it touches, one bite per bird, with a four-second cooldown.
+
+Every dropping that hits you takes one upgrade away, the newest first, and the bar restarts. Stay clean to keep the gold.
 
 At the end you get the **FINAL RESULT** screen: YOU GOT PIGEONED, time survived, score, pigeons eaten, and a **Copy X challenge** button that puts a ready-made challenge in your clipboard, plus a direct post-to-X button.
 
