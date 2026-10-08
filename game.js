@@ -107,8 +107,60 @@ function noise(dur, vol) {
     s.connect(g); g.connect(AC.destination); s.start();
   } catch (e) { /* ignore */ }
 }
+// Noise through a low-pass filter whose cutoff sweeps down: the wet part of a splat.
+// `flutter` (Hz) chops the noise into a squelchy "brrrt"; the envelope is baked into the buffer.
+function splash(dur, vol, fFrom, fTo, when, flutter) {
+  if (!save.sound || !ac()) return;
+  try {
+    const t0 = AC.currentTime + (when || 0), sr = AC.sampleRate, n = Math.floor(sr * dur), buf = AC.createBuffer(1, n, sr), d = buf.getChannelData(0);
+    for (let i = 0; i < n; i++) {
+      const k = i / n, env = k < 0.08 ? k / 0.08 : 1 - (k - 0.08) / 0.92;
+      const am = flutter ? 0.45 + 0.55 * Math.max(0, Math.sin(TAU * flutter * i / sr + Math.sin(i / sr * 9) * 1.5)) : 1;
+      d[i] = (Math.random() * 2 - 1) * env * am;
+    }
+    const src = AC.createBufferSource(), f = AC.createBiquadFilter(), g = AC.createGain();
+    src.buffer = buf; f.type = 'lowpass'; f.Q.value = 1.4;
+    f.frequency.setValueAtTime(fFrom, t0); f.frequency.exponentialRampToValueAtTime(fTo, t0 + dur);
+    g.gain.value = vol;
+    src.connect(f); f.connect(g); g.connect(AC.destination); src.start(t0); src.stop(t0 + dur + 0.02);
+  } catch (e) { /* ignore */ }
+}
+// A short sine blip whose pitch drops: one bubble.
+function plop(freq, dur, vol, when) {
+  if (!save.sound || !ac()) return;
+  try {
+    const t0 = AC.currentTime + (when || 0), o = AC.createOscillator(), g = AC.createGain();
+    o.type = 'sine'; o.frequency.setValueAtTime(freq, t0); o.frequency.exponentialRampToValueAtTime(Math.max(30, freq * 0.18), t0 + dur);
+    g.gain.setValueAtTime(vol, t0); g.gain.linearRampToValueAtTime(0.0001, t0 + dur);
+    o.connect(g); g.connect(AC.destination); o.start(t0); o.stop(t0 + dur + 0.02);
+  } catch (e) { /* ignore */ }
+}
+// A wobbly muted note (vibrato + low-pass), for the sad trombone.
+function wah(freq, dur, vol, when) {
+  if (!save.sound || !ac()) return;
+  try {
+    const t0 = AC.currentTime + (when || 0);
+    const o = AC.createOscillator(), lfo = AC.createOscillator(), lg = AC.createGain(), f = AC.createBiquadFilter(), g = AC.createGain();
+    o.type = 'sawtooth'; o.frequency.setValueAtTime(freq, t0); o.frequency.exponentialRampToValueAtTime(freq * 0.94, t0 + dur);
+    lfo.type = 'sine'; lfo.frequency.value = 6.5; lg.gain.value = freq * 0.035; lfo.connect(lg); lg.connect(o.frequency);
+    f.type = 'lowpass'; f.frequency.setValueAtTime(900, t0); f.frequency.exponentialRampToValueAtTime(350, t0 + dur); f.Q.value = 3;
+    g.gain.setValueAtTime(0.0001, t0); g.gain.exponentialRampToValueAtTime(vol, t0 + 0.03); g.gain.setValueAtTime(vol, t0 + dur * 0.6); g.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
+    o.connect(f); f.connect(g); g.connect(AC.destination); o.start(t0); lfo.start(t0); o.stop(t0 + dur + 0.02); lfo.stop(t0 + dur + 0.02);
+  } catch (e) { /* ignore */ }
+}
 function sfxChomp() { noise(0.12, 0.12); tone(180, 0.12, 'square', 0.06, 60); }
-function sfxSplat() { noise(0.2, 0.08); tone(120, 0.25, 'sawtooth', 0.07, 40); }
+function sfxSplat() {
+  // 1. the hit: a fat plop that drops in pitch under a wet burst
+  plop(360, 0.2, 0.22);
+  splash(0.14, 0.3, 3200, 600);
+  // 2. the disgusting part: a long squelch, noise fluttering at ~24 Hz through a closing filter
+  splash(0.55, 0.26, 1600, 180, 0.06, 24);
+  // 3. bubbles popping in the mess, then two drips
+  for (let i = 0; i < 5; i++) plop(rnd(160, 320), 0.09, 0.07, 0.12 + i * 0.075 + rnd(0, 0.03));
+  splash(0.05, 0.07, 1400, 500, 0.62); splash(0.04, 0.05, 1100, 400, 0.74);
+  // 4. sad trombone for the crocodile: wah... waaah
+  wah(233, 0.22, 0.065, 0.4); wah(207, 0.5, 0.07, 0.64);
+}
 function sfxCoo() { tone(520, 0.08, 'triangle', 0.025, 420); tone(480, 0.08, 'triangle', 0.02, 380, 0.09); }
 function sfxGold() { [880, 1108, 1318, 1760].forEach((f, i) => tone(f, 0.12, 'triangle', 0.05, null, i * 0.07)); }
 function sfxItalian() {
@@ -579,5 +631,5 @@ document.addEventListener('visibilitychange', () => { last = performance.now(); 
 openStart();
 requestAnimationFrame(frame);
 
-window.CrocVsPigeon = { G, save, startGame, update, draw, pressStart, pressEnd, moveCroc, openStart, playFromStart, upsert, cleanName, PIGEONS, W, H, GROUND, CROC_X };
+window.CrocVsPigeon = { G, save, sfxSplat, sfxChomp, startGame, update, draw, pressStart, pressEnd, moveCroc, openStart, playFromStart, upsert, cleanName, PIGEONS, W, H, GROUND, CROC_X };
 })();
