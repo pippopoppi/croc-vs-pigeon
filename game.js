@@ -1,4 +1,4 @@
-/* Coccodrillo vs Piccione — a 30-second one-button arcade game. Pippo Poppi Games. MIT licence. */
+/* Coccodrillo vs Piccione — a one-button survival arcade game. Pippo Poppi Games. MIT licence. */
 (() => {
 'use strict';
 
@@ -9,7 +9,8 @@ const GROUND = 302;            // where the crocodile stands
 const CROC_X = 100;            // starting x
 const CROC_S = 0.65;           // crocodile size
 const CROC_MIN = 24, CROC_MAX = W - 24;
-const ROUND = 30;              // seconds per game
+const RAMP = 60;               // seconds over which the difficulty climbs to full
+const INFERNO_AT = 45;         // seconds after which the inferno never stops
 const SAVE_KEY = 'crocvspigeon.v1';
 const SITE_URL = (location.origin + location.pathname).replace(/index\.html$/, '');
 const TAU = 6.2832;
@@ -25,7 +26,7 @@ const PIGEONS = {
 
 // ---------- save ----------
 function loadSave() {
-  const d = { best: 0, bestEaten: 0, games: 0, sound: true };
+  const d = { best: 0, bestEaten: 0, bestTime: 0, games: 0, sound: true };
   try { const s = JSON.parse(localStorage.getItem(SAVE_KEY)); if (s) Object.assign(d, s); } catch (e) { /* no storage */ }
   return d;
 }
@@ -72,14 +73,14 @@ function sfxBoss() { tone(90, 0.5, 'sawtooth', 0.08, 50); tone(70, 0.5, 'sawtoot
 
 // ---------- state ----------
 const G = {
-  state: 'title', t: 0, left: ROUND, score: 0, eaten: 0, combo: 0, best: 0, hearts: 3,
+  state: 'title', t: 0, score: 0, eaten: 0, combo: 0, best: 0, hearts: 3,
   croc: { x: CROC_X, y: GROUND, vy: 0, air: false, charge: 0, charging: false, mouth: 0, bite: 0, hurt: 0, ate: 0 },
   birds: [], poops: [], parts: [], floats: [], spawnT: 1.2, bossT: 14, bossDone: 0, shake: 0, flash: 0, lastTick: 31, inferno: false, msg: null, msgT: 0,
   clouds: Array.from({ length: 5 }, (_, i) => ({ x: i * 50 + rnd(0, 30), y: 20 + rnd(0, 50), w: 18 + rnd(0, 18) })),
 };
 
 function startGame() {
-  G.state = 'play'; G.t = 0; G.left = ROUND; G.score = 0; G.eaten = 0; G.combo = 0; G.hearts = 3;
+  G.state = 'play'; G.t = 0; G.score = 0; G.eaten = 0; G.combo = 0; G.hearts = 3;
   G.croc = { x: CROC_X, y: GROUND, vy: 0, air: false, charge: 0, charging: false, mouth: 0, bite: 0, hurt: 0, ate: 0 };
   G.birds = []; G.poops = []; G.parts = []; G.floats = []; G.spawnT = 0.6; G.bossT = 14; G.bossDone = 0; G.shake = 0; G.flash = 0; G.lastTick = 31; G.inferno = false; G.msg = null;
   save.games++; persist();
@@ -89,8 +90,8 @@ function startGame() {
 function spawnBird(type) {
   const P = PIGEONS[type];
   const fromLeft = Math.random() < 0.5;
-  const diff = G.t / ROUND;
-  const base = 38 + diff * 34 + (G.inferno ? 18 : 0);
+  const diff = Math.min(1, G.t / RAMP);
+  const base = 38 + diff * 34 + (G.inferno ? 18 : 0) + Math.min(30, Math.max(0, G.t - RAMP) * 0.25);
   const b = { type, x: fromLeft ? -20 : W + 20, dir: fromLeft ? 1 : -1, y: P.boss ? 120 : rnd(90, 240), baseY: 0, r: P.r, hp: P.hp, maxHp: P.hp,
     speed: base * P.speed * rnd(0.85, 1.15), ph: Math.random() * TAU, bombT: rnd(0.4, 1.2), dodgeT: 0, dead: false, hit: 0 };
   b.baseY = b.y;
@@ -99,7 +100,7 @@ function spawnBird(type) {
   else if (P.golden) { G.msg = 'PICCIONE D’ORO!'; G.msgT = 1.2; sfxGold(); }
 }
 function pickType() {
-  const r = Math.random(), late = G.t > ROUND * 0.4;
+  const r = Math.random(), late = G.t > 20;
   if (r < 0.03) return 'golden';
   if (r < (late ? 0.28 : 0.14)) return 'maranza';
   if (r < (late ? 0.5 : 0.3)) return 'bomber';
@@ -144,12 +145,12 @@ function hurt() {
 
 // ---------- simulation ----------
 function update(dt) {
-  G.t += dt; G.left -= dt;
+  G.t += dt;
   G.shake = Math.max(0, G.shake - dt * 3); G.flash = Math.max(0, G.flash - dt * 2);
   if (G.msgT > 0) { G.msgT -= dt; if (G.msgT <= 0) G.msg = null; }
   for (const cl of G.clouds) { cl.x += 3 * dt; if (cl.x > W + 30) cl.x = -40; }
-  if (!G.inferno && G.left <= 10) { G.inferno = true; G.msg = 'ULTIMI 10 SECONDI: INFERNO!'; G.msgT = 1.6; tone(200, 0.4, 'sawtooth', 0.07, 400); }
-  if (G.left <= 10 && Math.ceil(G.left) < G.lastTick) { G.lastTick = Math.ceil(G.left); sfxTick(); }
+  if (!G.inferno && G.t >= INFERNO_AT) { G.inferno = true; G.msg = 'INFERNO!'; G.msgT = 1.6; tone(200, 0.4, 'sawtooth', 0.07, 400); }
+  if (G.t >= INFERNO_AT - 5 && G.t < INFERNO_AT && Math.floor(G.t) > G.lastTick) { G.lastTick = Math.floor(G.t); sfxTick(); }
 
   // croc
   const c = G.croc;
@@ -167,8 +168,8 @@ function update(dt) {
   G.spawnT -= dt;
   if (G.spawnT <= 0) {
     spawnBird(pickType());
-    const diff = G.t / ROUND;
-    G.spawnT = (G.inferno ? 0.45 : 1.25 - diff * 0.6) * rnd(0.7, 1.3);
+    const diff = Math.min(1, G.t / RAMP);
+    G.spawnT = (G.inferno ? Math.max(0.3, 0.5 - (G.t - INFERNO_AT) * 0.003) : 1.25 - diff * 0.6) * rnd(0.7, 1.3);
   }
   G.bossT -= dt;
   if (G.bossT <= 0 && !G.birds.some(b => b.type === 'boss')) { spawnBird('boss'); G.bossT = 12; }
@@ -209,13 +210,13 @@ function update(dt) {
   for (let i = G.parts.length - 1; i >= 0; i--) { const p = G.parts[i]; p.life -= dt; if (p.life <= 0) { G.parts.splice(i, 1); continue; } p.x += p.vx * dt; p.y += p.vy * dt; p.vy += 200 * dt; }
   for (let i = G.floats.length - 1; i >= 0; i--) { const f = G.floats[i]; f.life -= dt; f.y -= 25 * dt; if (f.life <= 0) G.floats.splice(i, 1); }
 
-  if (G.hearts <= 0 || G.left <= 0) endGame();
+  if (G.hearts <= 0) endGame();
 }
 
 function endGame() {
-  G.state = 'over'; G.left = Math.max(0, G.left);
+  G.state = 'over';
   const newBest = G.score > save.best;
-  save.best = Math.max(save.best, G.score); save.bestEaten = Math.max(save.bestEaten, G.eaten); persist();
+  save.best = Math.max(save.best, G.score); save.bestEaten = Math.max(save.bestEaten, G.eaten); save.bestTime = Math.max(save.bestTime, G.t); persist();
   tone(newBest ? 660 : 160, 0.5, newBest ? 'triangle' : 'sawtooth', 0.07, newBest ? 990 : 60);
   showEnd(newBest);
 }
@@ -340,8 +341,8 @@ function draw() {
   R(0, 0, W, 14, 'rgba(0,0,0,0.55)');
   text('SCORE ' + String(G.score).padStart(5, '0'), 4, 3, '#fff', 8);
   for (let i = 0; i < 3; i++) text(i < G.hearts ? '♥' : '♡', 88 + i * 9, 2, i < G.hearts ? '#ff5e5e' : '#888', 9);
-  const sec = Math.max(0, Math.ceil(G.left));
-  text('00:' + String(sec).padStart(2, '0'), W - 4, 3, G.left <= 10 && Math.floor(t * 4) % 2 === 0 ? '#ff5e5e' : '#fff', 8, 'right');
+  const el = Math.floor(G.t), mm = Math.floor(el / 60), ss = el % 60;
+  text(String(mm).padStart(2, '0') + ':' + String(ss).padStart(2, '0'), W - 4, 3, G.inferno && Math.floor(t * 4) % 2 === 0 ? '#ff5e5e' : '#fff', 8, 'right');
   if (G.state === 'play') {
     const mult = Math.min(5, 1 + Math.floor(G.combo / 5));
     R(0, H - 14, W, 14, 'rgba(0,0,0,0.55)');
@@ -352,7 +353,8 @@ function draw() {
   if (G.state === 'title') {
     R(0, 100, W, 60, 'rgba(0,0,0,0.6)');
     text('COCCODRILLO', W / 2, 106, '#a0d779', 14, 'center'); text('VS PICCIONE', W / 2, 122, '#fff', 14, 'center');
-    text('TAP TO START', W / 2, 146, Math.floor(t * 2) % 2 === 0 ? '#ffd84a' : '#fff', 8, 'center');
+    text('SURVIVE. EAT. DODGE.', W / 2, 138, '#9fb3c9', 7, 'center');
+    text('TAP TO START', W / 2, 149, Math.floor(t * 2) % 2 === 0 ? '#ffd84a' : '#fff', 8, 'center');
   }
   // present: scale up with crisp pixels
   ctx.imageSmoothingEnabled = false;
@@ -392,14 +394,16 @@ window.addEventListener('keyup', e => {
 const $ = id => document.getElementById(id);
 function showScreen(id) { document.querySelectorAll('.screen').forEach(s => s.classList.toggle('hidden', s.id !== id)); }
 function challengeText() {
-  return 'Ho mangiato ' + G.eaten + ' piccioni e fatto ' + G.score.toLocaleString() + ' punti in Coccodrillo vs Piccione 🐊🐦 Battimi: ' + SITE_URL + ' #CoccodrilloVsPiccione #PippoPoppiGames';
+  return 'Sono sopravvissuto ' + fmtTime(G.t) + ', ho mangiato ' + G.eaten + ' piccioni e fatto ' + G.score.toLocaleString() + ' punti in Coccodrillo vs Piccione 🐊🐦 Battimi: ' + SITE_URL + ' #CoccodrilloVsPiccione #PippoPoppiGames';
 }
+function fmtTime(t) { const el = Math.floor(t); return (el >= 60 ? Math.floor(el / 60) + 'm ' : '') + (el % 60) + 's'; }
 function showEnd(newBest) {
-  $('end-title').textContent = G.hearts > 0 ? (G.eaten >= 25 ? 'APEX PREDATOR. 🐊' : 'TIME’S UP. 🐦') : 'YOU GOT PIGEONED. 🐦';
+  $('end-title').textContent = G.t >= 90 ? 'APEX PREDATOR. 🐊' : 'YOU GOT PIGEONED. 🐦';
+  $('end-time').textContent = fmtTime(G.t);
   $('end-score').textContent = G.score.toLocaleString();
   $('end-eaten').textContent = G.eaten;
-  $('end-best').textContent = (newBest ? 'NEW RECORD! ' : 'Record: ' + save.best.toLocaleString() + ' · ') + 'Partite: ' + save.games;
-  $('end-tag').textContent = G.hearts > 0 ? (G.eaten >= 25 ? 'Roma è tua. I piccioni lo sanno.' : 'Non male. I piccioni ridono comunque.') : 'You are not the apex predator. You are the lunch.';
+  $('end-best').textContent = (newBest ? 'NEW RECORD! ' : 'Record: ' + save.best.toLocaleString() + ' · ') + 'Miglior tempo: ' + fmtTime(save.bestTime) + ' · Partite: ' + save.games;
+  $('end-tag').textContent = G.t >= 90 ? 'Roma è tua. I piccioni lo sanno.' : G.t >= 45 ? 'Hai visto l’inferno. L’inferno ha visto te.' : 'You are not the apex predator. You are the lunch.';
   $('btn-share').href = 'https://twitter.com/intent/tweet?text=' + encodeURIComponent(challengeText().replace(SITE_URL, '')) + '&url=' + encodeURIComponent(SITE_URL);
   $('btn-copy').textContent = 'COPY X CHALLENGE';
   showScreen('end');

@@ -86,7 +86,7 @@ def card():
     d.text((40, 18), "COCCODRILLO VS PICCIONE", font=font(54), fill="#a0d779")
     d.rectangle((0, 470, W, 630), fill=(0, 0, 0, 160))
     d.text((40, 488), "ONE CROCODILE. INFINITE PIGEONS. ZERO DIGNITY.", font=font(40), fill="#ffd84a")
-    d.text((40, 548), "Hold to charge, release to bite. 30 seconds. Pippo Poppi Games.", font=font(28, bold=False), fill="#fff")
+    d.text((40, 548), "Hold to charge, release to bite, dodge, survive. Pippo Poppi Games.", font=font(28, bold=False), fill="#fff")
     img.save(os.path.join(ROOT, "og.png"), optimize=True)
     print("wrote og.png")
 
