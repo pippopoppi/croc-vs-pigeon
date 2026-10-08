@@ -129,7 +129,7 @@ const G = {
 
 function startGame() {
   G.state = 'play'; G.t = 0; G.score = 0; G.eaten = 0; G.combo = 0; G.hearts = 3;
-  G.croc = { x: CROC_X, y: GROUND, vy: 0, air: false, charge: 0, charging: false, mouth: 0, bite: 0, hurt: 0, ate: 0 };
+  G.croc = { x: CROC_X, y: GROUND, vy: 0, dir: 1, air: false, charge: 0, charging: false, mouth: 0, bite: 0, hurt: 0, ate: 0 };
   G.birds = []; G.poops = []; G.parts = []; G.floats = []; G.spawnT = 0.6; G.bossT = 14; G.bossDone = 0; G.shake = 0; G.flash = 0; G.lastTick = 31; G.inferno = false; G.msg = null;
   save.games++; persist();
   showScreen(null);
@@ -203,8 +203,8 @@ function update(dt) {
   // croc
   const c = G.croc;
   if (c.hurt > 0) c.hurt -= dt;
-  if (keys.left) c.x = clamp(c.x - 120 * dt, CROC_MIN, CROC_MAX);
-  if (keys.right) c.x = clamp(c.x + 120 * dt, CROC_MIN, CROC_MAX);
+  if (keys.left) moveCroc(c.x - 120 * dt);
+  if (keys.right) moveCroc(c.x + 120 * dt);
   if (c.charging && !c.air) c.charge = Math.min(1, c.charge + dt / 0.8);
   if (c.air) {
     c.vy += G_ACC * dt; c.y += c.vy * dt;
@@ -223,7 +223,7 @@ function update(dt) {
   if (G.bossT <= 0 && !G.birds.some(b => b.type === 'boss')) { spawnBird('boss'); G.bossT = 12; }
 
   // birds
-  const mouth = { x: c.x + 8, y: c.y - 10, r: 11 };
+  const mouth = { x: c.x + 8 * c.dir, y: c.y - 10, r: 11 };
   for (const b of G.birds) {
     if (b.dead) continue;
     const P = PIGEONS[b.type];
@@ -357,8 +357,8 @@ function drawCroc(t) {
   if (c.hurt > 0 && Math.floor(t * 20) % 2 === 0) return;
   // shadow on the ground, shrinking with height
   const hgt = GROUND - c.y, sh = clamp(1 - hgt / 220, 0.35, 1);
-  ell(c.x + 2, GROUND + 29, 34 * CROC_S * sh, 5 * sh, 'rgba(0,0,0,' + (0.28 * sh) + ')');
-  p.save(); p.translate(c.x, c.y); p.scale(CROC_S, CROC_S);
+  ell(c.x + 2 * c.dir, GROUND + 29, 34 * CROC_S * sh, 5 * sh, 'rgba(0,0,0,' + (0.28 * sh) + ')');
+  p.save(); p.translate(c.x, c.y); p.scale(CROC_S * c.dir, CROC_S);   // dir flips the whole crocodile to face the way it moves
   const squash = !c.air && c.charging ? c.charge * 0.18 : 0;
   const stretch = c.air ? clamp(-c.vy / 900, -0.08, 0.1) : 0;
   p.translate(0, 30); p.scale(1 + squash * 0.6 - stretch * 0.4, 1 - squash + stretch); p.translate(0, -30);
@@ -468,6 +468,13 @@ function draw() {
   }
 }
 
+// The crocodile turns to face the direction it moves in (dir: 1 = right, -1 = left).
+function moveCroc(nx) {
+  const c = G.croc; nx = clamp(nx, CROC_MIN, CROC_MAX);
+  if (nx > c.x + 0.3) c.dir = 1; else if (nx < c.x - 0.3) c.dir = -1;
+  c.x = nx;
+}
+
 // ---------- input: one button ----------
 function pressStart() {
   ac();
@@ -481,7 +488,7 @@ const keys = { left: false, right: false };
 let drag = null;
 function pointerX(e) { const r = canvas.getBoundingClientRect(); return (e.clientX - r.left) / r.width * W; }
 canvas.addEventListener('pointerdown', e => { e.preventDefault(); pressStart(); drag = { px: pointerX(e), cx: G.croc.x }; try { canvas.setPointerCapture(e.pointerId); } catch (err) { /* ignore */ } });
-canvas.addEventListener('pointermove', e => { if (!drag || G.state !== 'play') return; G.croc.x = clamp(drag.cx + (pointerX(e) - drag.px) * 1.5, CROC_MIN, CROC_MAX); });
+canvas.addEventListener('pointermove', e => { if (!drag || G.state !== 'play') return; moveCroc(drag.cx + (pointerX(e) - drag.px) * 1.5); });
 canvas.addEventListener('pointerup', pressEnd);
 canvas.addEventListener('pointercancel', pressEnd);
 window.addEventListener('keydown', e => {
@@ -565,5 +572,5 @@ document.addEventListener('visibilitychange', () => { last = performance.now(); 
 openStart();
 requestAnimationFrame(frame);
 
-window.CrocVsPigeon = { G, save, startGame, update, draw, pressStart, pressEnd, openStart, playFromStart, upsert, cleanName, PIGEONS, W, H, GROUND, CROC_X };
+window.CrocVsPigeon = { G, save, startGame, update, draw, pressStart, pressEnd, moveCroc, openStart, playFromStart, upsert, cleanName, PIGEONS, W, H, GROUND, CROC_X };
 })();
