@@ -24,9 +24,9 @@ No install, no menus, no login, no tutorial. One HTML page plus one JavaScript f
 - **Piccione d'oro**: rare, very fast, 1,000 points.
 - **Italian combo**: five catches in a row and a distorted tarantella plays.
 - **Bosses**, one every 12 seconds or so, each worth an extra heart when eaten, beyond the starting three:
-  - **Il Piccione Gigante** from the start: three bites, a storm of poop.
-  - **Il Gabbiano Reale** after 50 seconds: four bites, long wings, and it dives at you. Jump into it with open jaws or get out of the way.
+  - **Il Piccione Gigante** from the start: three bites, a storm of poop. A deep pigeon call announces it.
   - **Il Corvaccio** after 100 seconds: five bites, drops two at a time, and teleports away when you jump at it. Nets don't miss.
+  - A royal seagull that dives at you is implemented in `game.js` but held back for a future level.
 
 ## Upgrades
 

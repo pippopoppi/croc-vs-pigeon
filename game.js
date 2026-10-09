@@ -30,9 +30,10 @@ const PIGEONS = {
   gull:    { score: 800,  r: 20, speed: 0.7, hp: 4, color: '#f4f6f8', dark: '#b9c3cc', boss: true, bombs: true, dives: true, name: 'IL GABBIANO REALE' },
   crow:    { score: 1200, r: 20, speed: 0.5, hp: 5, color: '#33333f', dark: '#15151c', boss: true, bombs: true, blinks: true, twin: true, name: 'IL CORVACCIO' },
 };
-// Boss roster unlocks with time: the giant pigeon from the start, the royal seagull (dives at
-// you) after 50 s, the crow (teleports away from your jumps, drops two at a time) after 100 s.
-const BOSS_UNLOCK = { boss: 0, gull: 50, crow: 100 };
+// Boss roster unlocks with time: the giant pigeon from the start, the crow (teleports away from
+// your jumps, drops two at a time) after 100 s. The seagull ('gull', dives at you) is fully
+// implemented but kept out of the roster for a future level.
+const BOSS_UNLOCK = { boss: 0, crow: 100 };
 // Crocodile upgrades, earned by eating (bosses count triple) and lost one step per dropping.
 const TIERS = [
   { need: 12, name: 'DENTI D’ORO', unlock: 'DENTI D’ORO! MORSO PIÙ GRANDE', lose: 'HAI PERSO I DENTI D’ORO!' },
@@ -184,7 +185,24 @@ function sfxTick() { tone(1200, 0.04, 'square', 0.03); }
 function sfxUpgrade() { [523, 659, 784, 1047, 1319].forEach((f, i) => tone(f, 0.14, 'triangle', 0.05, null, i * 0.06)); noise(0.08, 0.04); }
 function sfxLose() { tone(440, 0.18, 'square', 0.05, 330); tone(330, 0.3, 'square', 0.05, 180, 0.18); }
 function sfxNet() { noise(0.12, 0.06); tone(260, 0.22, 'triangle', 0.05, 980); }
-function sfxBoss() { tone(90, 0.5, 'sawtooth', 0.08, 50); tone(70, 0.5, 'sawtooth', 0.06, 40, 0.3); }
+// One syllable of a pigeon call: a soft low note with a throaty flutter, through a low-pass.
+function coo(freq, dur, vol, when, slide) {
+  if (!save.sound || !ac()) return;
+  try {
+    const t0 = AC.currentTime + (when || 0);
+    const o = AC.createOscillator(), lfo = AC.createOscillator(), lg = AC.createGain(), f = AC.createBiquadFilter(), g = AC.createGain();
+    o.type = 'triangle'; o.frequency.setValueAtTime(freq, t0); o.frequency.exponentialRampToValueAtTime(slide || freq * 0.9, t0 + dur);
+    lfo.type = 'sine'; lfo.frequency.value = 28; lg.gain.value = freq * 0.12; lfo.connect(lg); lg.connect(o.frequency);
+    f.type = 'lowpass'; f.frequency.value = 700; f.Q.value = 2.5;
+    g.gain.setValueAtTime(0.0001, t0); g.gain.exponentialRampToValueAtTime(vol, t0 + 0.04); g.gain.setValueAtTime(vol, t0 + dur * 0.55); g.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
+    o.connect(f); f.connect(g); g.connect(AC.destination); o.start(t0); lfo.start(t0); o.stop(t0 + dur + 0.02); lfo.stop(t0 + dur + 0.02);
+  } catch (e) { /* ignore */ }
+}
+// The boss arrives: a big, deep pigeon "gru-gru-gruuuu" over a low rumble.
+function sfxBoss() {
+  coo(210, 0.16, 0.11, 0); coo(210, 0.16, 0.11, 0.2); coo(195, 0.75, 0.12, 0.4, 150);
+  tone(70, 0.9, 'sawtooth', 0.05, 45, 0.05);
+}
 
 // ---------- state ----------
 const G = {
@@ -211,7 +229,7 @@ function spawnBird(type) {
     speed: base * P.speed * rnd(0.85, 1.15), ph: Math.random() * TAU, bombT: rnd(0.4, 1.2), dodgeT: 0, dead: false, hit: 0, dive: 0, dy: 0, diveT: 1.5 };
   b.baseY = b.y;
   G.birds.push(b);
-  if (P.boss) { G.msg = P.name + '!'; G.msgT = 1.6; sfxBoss(); G.shake = 0.6; if (P.blinks) tone(55, 0.8, 'sawtooth', 0.07, 30, 0.1); }
+  if (P.boss) { G.msg = 'IL CAPO!'; G.msgT = 1.6; sfxBoss(); G.shake = 0.6; if (P.blinks) tone(55, 0.8, 'sawtooth', 0.07, 30, 0.1); }
   else if (P.golden) { G.msg = 'PICCIONE D’ORO!'; G.msgT = 1.2; sfxGold(); }
 }
 function pickBoss() {
@@ -731,5 +749,5 @@ document.addEventListener('visibilitychange', () => { last = performance.now(); 
 openStart();
 requestAnimationFrame(frame);
 
-window.CrocVsPigeon = { G, save, sfxSplat, sfxChomp, throwNet, pickBoss, progress, hurt, spawnBird, TIERS, BOSS_UNLOCK, startGame, update, draw, pressStart, pressEnd, moveCroc, openStart, playFromStart, upsert, cleanName, PIGEONS, W, H, GROUND, CROC_X };
+window.CrocVsPigeon = { G, save, sfxSplat, sfxChomp, sfxBoss, throwNet, pickBoss, progress, hurt, spawnBird, TIERS, BOSS_UNLOCK, startGame, update, draw, pressStart, pressEnd, moveCroc, openStart, playFromStart, upsert, cleanName, PIGEONS, W, H, GROUND, CROC_X };
 })();
