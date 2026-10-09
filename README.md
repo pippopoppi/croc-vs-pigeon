@@ -8,6 +8,8 @@ A one-button survival arcade game by Pippo Poppi Games. A giant crocodile in the
 
 **Trailer (30 s, with sound):** https://pippopoppi.github.io/croc-vs-pigeon/media/promo.mp4
 
+**TikTok cut (20 s, brainrot edition):** https://pippopoppi.github.io/croc-vs-pigeon/media/tiktok.mp4
+
 No install, no menus, no login, no tutorial. One HTML page plus one JavaScript file on an HTML5 canvas, with all the art drawn in code as vector shapes at full device resolution.
 
 ## How to play
