@@ -47,7 +47,7 @@ At the end you get the **FINAL RESULT** screen: YOU GOT PIGEONED, time survived,
 
 Before playing you type a nickname. Every finished game goes into the ranking under that name, and a new score only replaces your row when it is better, so you can reuse the same name forever and keep your record. The ranking screen (also reachable from the result screen with "Classifica / cambia nome") shows the top 10 with score and time survived.
 
-Out of the box the ranking is per device, stored in the browser. To make it a world ranking shared by everyone, deploy the tiny server in `server/` (a Cloudflare Worker with one KV key, free tier is plenty) and point the game at it:
+The ranking is a world ranking shared by everyone, served by the Pippo Poppi Games Worker at https://github.com/pippopoppi/ranking (`LEADERBOARD_URL` at the top of `game.js`; set it to an empty string for a per-device ranking only). The copy of the original single-game Worker in `server/` is kept for reference. To run your own:
 
 ```
 cd server

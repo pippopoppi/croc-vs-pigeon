@@ -14,7 +14,7 @@ const INFERNO_AT = 45;         // seconds after which the inferno never stops
 const SAVE_KEY = 'crocvspigeon.v1';
 // Shared ranking. Leave empty for a per-device ranking only; set it to the URL of the
 // deployed Cloudflare Worker in server/ to enable the world ranking (see README).
-const LEADERBOARD_URL = '';
+const LEADERBOARD_URL = 'https://ranking.pippopoppi.workers.dev/croc-vs-pigeon';
 const BOARD_SIZE = 10;         // rows shown
 const BOARD_KEEP = 100;        // rows kept locally
 const SITE_URL = (location.origin + location.pathname).replace(/index\.html$/, '');
