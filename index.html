@@ -77,6 +77,7 @@
     <div class="label" id="board-title">CLASSIFICA</div>
     <ol class="board" id="board"></ol>
     <div class="best" id="board-note"></div>
+    <div class="best" id="visits" hidden></div>
   </div>
 
   <div id="end" class="screen hidden">
@@ -98,6 +99,9 @@
   </div>
 </div>
 <script src="game.js"></script>
+<script>
+(function(){var n=document.getElementById('visits');if(!n||!window.fetch)return;fetch('https://pippopoppi.goatcounter.com/counter/'+location.pathname+'.json').then(function(r){return r.ok?r.json():null;}).then(function(d){var c=d&&String(d.count||'');if(!c||c==='0')return;n.textContent=c==='1'?'Giocato 1 volta':'Giocato '+c+' volte';n.hidden=false;n.dataset.ok='1';}).catch(function(){});})();
+</script>
 <!-- Visitor count (GoatCounter: no cookies, no personal data) -->
 <script data-goatcounter="https://pippopoppi.goatcounter.com/count" async src="//gc.zgo.at/count.js"></script>
 </body>
